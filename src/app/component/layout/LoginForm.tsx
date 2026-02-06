@@ -24,7 +24,6 @@ const LoginForm = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Basic client-side validation
     if (!emailOrUsername.trim() || !password.trim()) {
       setError("Please fill in all fields");
       return;
@@ -42,17 +41,23 @@ const LoginForm = () => {
       if (result.error) {
         setError(result.error);
       } else {
-        // Use the redirect path provided by the server
         const redirectPath = result.redirectTo || '/user/dashboard';
         router.push(redirectPath);
       }
     } catch (err) {
-      console.log(err)
+      console.error("Login Error:", err);
       setError("An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
   };
+
+  const socials = [
+    { Icon: FaFacebookF, name: "Facebook" },
+    { Icon: FaLinkedinIn, name: "LinkedIn" },
+    { Icon: FaTwitter, name: "Twitter" },
+    { Icon: FaInstagram, name: "Instagram" },
+  ];
 
   return (
     <section
@@ -71,7 +76,7 @@ const LoginForm = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
-            className="inline-flex items-center gap-2 text-xs sm:text-sm font-medium uppercase tracking-wider text-emerald-600"
+            className="inline-flex items-center gap-2 text-xs sm:text-sm font-medium uppercase tracking-wider text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full"
           >
             <span>✨</span> Welcome Back
           </motion.div>
@@ -89,9 +94,9 @@ const LoginForm = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.4 }}
-            className="text-gray-600 max-w-md mx-auto lg:mx-0 text-sm sm:text-base"
+            className="text-gray-600 max-w-md mx-auto lg:mx-0 text-sm sm:text-base leading-relaxed"
           >
-            Sign in to manage your account and access exclusive features.
+            Sign in to manage your account, track your investments, and access exclusive partner features.
           </motion.p>
           
           <motion.div
@@ -100,14 +105,14 @@ const LoginForm = () => {
             transition={{ delay: 0.5 }}
             className="flex justify-center lg:justify-start gap-3 pt-2"
           >
-            {[FaFacebookF, FaLinkedinIn, FaTwitter, FaInstagram].map((Icon, i) => (
+            {socials.map(({ Icon, name }, i) => (
               <Link
                 key={i}
                 href="#"
-                className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-md border border-gray-200 hover:bg-emerald-50 hover:border-emerald-100 transition-colors duration-200"
-                aria-label={`Follow us on ${Icon.name.replace("Fa", "")}`}
+                className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-200 bg-white hover:bg-emerald-50 hover:border-emerald-100 transition-all duration-200 shadow-sm"
+                aria-label={`Follow us on ${name}`}
               >
-                <Icon className="text-gray-600 text-sm sm:text-base" />
+                <Icon className="text-gray-600 text-base" />
               </Link>
             ))}
           </motion.div>
@@ -118,21 +123,21 @@ const LoginForm = () => {
           initial={{ opacity: 0, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.4 }}
-          className="bg-white rounded-xl sm:rounded-2xl border border-gray-200 shadow-xs sm:shadow-sm p-6 sm:p-8 md:p-10"
+          className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 sm:p-8 md:p-10"
         >
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-1">
               <h3 className="text-xl sm:text-2xl font-semibold text-gray-900">Sign In</h3>
-              <p className="text-sm text-gray-500">Enter your credentials</p>
+              <p className="text-sm text-gray-500">Enter your credentials to continue</p>
             </div>
             
             {error && (
               <motion.div 
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="p-3 bg-red-50 text-red-700 rounded-md text-sm flex items-center"
+                className="p-4 bg-red-50 text-red-700 border border-red-100 rounded-lg text-sm flex items-center"
               >
-                <svg className="w-4 h-4 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-5 h-5 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                 </svg>
                 {error}
@@ -147,13 +152,12 @@ const LoginForm = () => {
                 <input
                   id="emailOrUsername"
                   type="text"
-                  name="emailOrUsername"
                   placeholder="Enter your email or username"
                   value={emailOrUsername}
                   onChange={(e) => setEmailOrUsername(e.target.value)}
-                  required
-                  className="w-full px-4 py-3 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition placeholder-gray-400"
+                  className="w-full px-4 py-3 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition placeholder-gray-400"
                   autoComplete="username"
+                  required
                 />
               </div>
               
@@ -164,13 +168,12 @@ const LoginForm = () => {
                 <input
                   id="password"
                   type="password"
-                  name="password"
-                  placeholder="Enter your password"
+                  placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="w-full px-4 py-3 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition placeholder-gray-400"
+                  className="w-full px-4 py-3 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition placeholder-gray-400"
                   autoComplete="current-password"
+                  required
                 />
               </div>
             </div>
@@ -179,11 +182,10 @@ const LoginForm = () => {
               <div className="flex items-center">
                 <input
                   id="remember-me"
-                  name="remember-me"
                   type="checkbox"
-                  className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
+                  className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded cursor-pointer"
                 />
-                <label htmlFor="remember-me" className="ml-2 block text-gray-700">
+                <label htmlFor="remember-me" className="ml-2 block text-gray-700 cursor-pointer">
                   Remember me
                 </label>
               </div>
@@ -199,7 +201,7 @@ const LoginForm = () => {
             <button
               type="submit"
               disabled={loading}
-              className="group w-full inline-flex items-center justify-center gap-2 py-3 px-6 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
+              className="group w-full inline-flex items-center justify-center gap-2 py-3 px-6 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
             >
               {loading ? (
                 <>
@@ -214,14 +216,14 @@ const LoginForm = () => {
               )}
             </button>
 
-            <div className="text-center text-sm text-gray-600">
+            <div className="text-center text-sm text-gray-600 pt-2">
               <p>
                 Don&apos;t have an account?{" "}
                 <Link 
                   href="/signup" 
                   className="text-emerald-600 hover:text-emerald-700 font-medium hover:underline"
                 >
-                  Register
+                  Register here
                 </Link>
               </p>
             </div>

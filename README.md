@@ -37,3 +37,4 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 # accilent
 # chainrise-patners
 # chainrise-patners-pro
+# chainrise-partners

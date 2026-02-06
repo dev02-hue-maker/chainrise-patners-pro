@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // components/admin/EditUserPage.tsx
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { toast } from "sonner";
 import { FaUser, FaEnvelope, FaPhone, FaBitcoin, FaEthereum, FaCog, FaMoneyBillWave } from "react-icons/fa";
@@ -59,11 +59,8 @@ const EditUserPage = () => {
   const [adminSession, setAdminSession] = useState<any>(null);
   const [originalEmail, setOriginalEmail] = useState<string>("");
 
-  useEffect(() => {
-    fetchUserData();
-  }, [userId]);
-
-  const fetchUserData = async () => {
+  // Wrap fetchUserData in useCallback to memoize it
+  const fetchUserData = useCallback(async () => {
     try {
       const session = await getAdminSession();
 
@@ -99,7 +96,12 @@ const EditUserPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId, router]);
+
+  // Now fetchUserData can be safely included in the dependency array
+  useEffect(() => {
+    fetchUserData();
+  }, [fetchUserData]);
 
   const handleSave = async () => {
     if (!profile) return;

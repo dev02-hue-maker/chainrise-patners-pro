@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   FiUserX, 
@@ -34,13 +34,8 @@ export default function UserManagementDashboard() {
   const [filter, setFilter] = useState<'all' | 'banned' | 'active'>('all')
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null)
 
-  // Fetch users and banned users
-  useEffect(() => {
-    fetchUsers()
-    fetchBannedUsers()
-  }, [])
-
-  const fetchUsers = async () => {
+  // Wrap fetchUsers in useCallback to memoize it
+  const fetchUsers = useCallback(async () => {
     try {
       const response = await getAllUsers()
       if (response.data) {
@@ -54,9 +49,10 @@ export default function UserManagementDashboard() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  const fetchBannedUsers = async () => {
+  // Wrap fetchBannedUsers in useCallback to memoize it
+  const fetchBannedUsers = useCallback(async () => {
     try {
       const response = await getBannedUsers()
       if (response.data) {
@@ -65,7 +61,13 @@ export default function UserManagementDashboard() {
     } catch (error) {
       console.error('Error fetching banned users:', error)
     }
-  }
+  }, [])
+
+  // Now fetchUsers and fetchBannedUsers can be safely included in the dependency array
+  useEffect(() => {
+    fetchUsers()
+    fetchBannedUsers()
+  }, [fetchUsers, fetchBannedUsers])
 
   const showNotification = (type: 'success' | 'error', message: string) => {
     setNotification({ type, message })

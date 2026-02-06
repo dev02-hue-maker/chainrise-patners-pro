@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Withdrawal, WithdrawalStatus } from '@/types/businesses';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -41,7 +41,8 @@ export default function AdminWithdrawalsTable() {
   const [processingAction, setProcessingAction] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchWithdrawals = async () => {
+  // Wrap fetchWithdrawals in useCallback to memoize it and prevent infinite re-renders
+  const fetchWithdrawals = useCallback(async () => {
     try {
       setLoading(true);
       const { data, error, count } = await getAllWithdrawals({
@@ -70,16 +71,17 @@ export default function AdminWithdrawalsTable() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [filters.status, filters.userId, pagination.page, pagination.pageSize]);
 
   const refreshWithdrawals = async () => {
     setRefreshing(true);
     await fetchWithdrawals();
   };
 
+  // Now fetchWithdrawals is properly included in the dependency array
   useEffect(() => {
     fetchWithdrawals();
-  }, [pagination.page, pagination.pageSize, filters.status, filters.userId]);
+  }, [fetchWithdrawals]);
 
   const handleApprove = async (withdrawalId: string) => {
     try {

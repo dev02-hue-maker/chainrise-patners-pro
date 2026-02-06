@@ -2,7 +2,7 @@
 // components/investment/InvestmentDashboard.tsx
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FiTrendingUp, 
@@ -85,11 +85,8 @@ const InvestmentDashboard = ({ userId }: { userId: string }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [processing, setProcessing] = useState(false);
 
-  useEffect(() => {
-    fetchInvestmentData();
-  }, [userId]);
-
-  const fetchInvestmentData = async () => {
+  // Wrap fetchInvestmentData in useCallback with its dependency
+  const fetchInvestmentData = useCallback(async () => {
     setRefreshing(true);
     try {
       console.log('🔄 [Dashboard] Fetching investment data for user:', userId);
@@ -130,7 +127,12 @@ const InvestmentDashboard = ({ userId }: { userId: string }) => {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [userId]);
+
+  // Now fetchInvestmentData can be safely included in the dependency array
+  useEffect(() => {
+    fetchInvestmentData();
+  }, [fetchInvestmentData]);
 
   const handleProcessMaturity = async () => {
     setProcessing(true);
@@ -301,8 +303,8 @@ const InvestmentStats = ({ totals, stats }: { totals: InvestmentTotals, stats: I
           }`}>
             <stat.icon className={`${
               stat.color === 'blue' ? 'text-blue-500' :
-              stat.color === 'orange' ? 'text-orange-500' :
-              stat.color === 'green' ? 'text-green-500' : 'text-purple-500'
+            stat.color === 'orange' ? 'text-orange-500' :
+            stat.color === 'green' ? 'text-green-500' : 'text-purple-500'
             } text-xl`} />
           </div>
         </div>

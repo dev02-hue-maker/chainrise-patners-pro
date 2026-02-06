@@ -1,5 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-"use server";
+ "use server";
 import { supabase } from "./supabaseClient";
 
 export interface WalletAddress {
@@ -13,6 +12,7 @@ export interface WalletAddress {
   created_at: string;
   updated_at: string;
 }
+
 
 // Create wallet address (Admin only)
 export async function createWalletAddress(walletData: {

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   FaFacebookF,
   FaLinkedinIn,
@@ -14,15 +14,17 @@ import {
   FaEthereum,
 } from "react-icons/fa";
 import { SiBinance, SiSolana, SiDogecoin, SiTether } from "react-icons/si";
-import { signUp } from "@/lib/auth";
+// Make sure this path exists in your project, or replace with console.log for testing
+import { signUp } from "@/lib/auth"; 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+// --- Types ---
 interface FormState {
   name: string;
   email: string;
   username: string;
-  phoneNumber: string;
+  // phoneNumber removed
   password: string;
   confirmPassword: string;
   referralCode?: string;
@@ -38,7 +40,7 @@ interface FormErrors {
   name?: string;
   email?: string;
   username?: string;
-  phoneNumber?: string;
+  // phoneNumber removed
   password?: string;
   confirmPassword?: string;
   referralCode?: string;
@@ -51,7 +53,7 @@ interface FormErrors {
   form?: string;
 }
 
-// Form persistence keys
+// --- Constants ---
 const FORM_STORAGE_KEY = 'chainrise_signup_form';
 const FORM_TIMESTAMP_KEY = 'chainrise_form_timestamp';
 const FORM_EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 hours
@@ -60,7 +62,7 @@ const initialState: FormState = {
   name: "",
   email: "",
   username: "",
-  phoneNumber: "",
+  // phoneNumber removed from initial state
   password: "",
   confirmPassword: "",
   referralCode: "",
@@ -78,10 +80,12 @@ const SignUpForm: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
+  const [isClient, setIsClient] = useState(false); // Fix for hydration issues
   const router = useRouter();
 
-  // Load saved form data from localStorage on component mount
+  // 1. Safe Hydration Check & LocalStorage Loading
   useEffect(() => {
+    setIsClient(true);
     const savedForm = localStorage.getItem(FORM_STORAGE_KEY);
     const savedTimestamp = localStorage.getItem(FORM_TIMESTAMP_KEY);
     
@@ -99,30 +103,24 @@ const SignUpForm: React.FC = () => {
           clearFormData();
         }
       } else {
-        // Clear expired form data
         clearFormData();
       }
     }
-  }, []);
 
-  // Save form data to localStorage whenever form changes
-  useEffect(() => {
-    if (Object.values(form).some(value => value !== "")) {
-      localStorage.setItem(FORM_STORAGE_KEY, JSON.stringify(form));
-      localStorage.setItem(FORM_TIMESTAMP_KEY, Date.now().toString());
-    }
-  }, [form]);
-
-  // Check for referral code in URL on component mount
-  useEffect(() => {
-    const refCode = typeof window !== 'undefined' 
-      ? new URLSearchParams(window.location.search).get('ref_id')
-      : null;
-
+    // Check URL params for referral code
+    const refCode = new URLSearchParams(window.location.search).get('ref_id');
     if (refCode) {
       setForm(prev => ({ ...prev, referralCode: refCode }));
     }
   }, []);
+
+  // 2. Save to LocalStorage on change
+  useEffect(() => {
+    if (isClient && Object.values(form).some(value => value !== "")) {
+      localStorage.setItem(FORM_STORAGE_KEY, JSON.stringify(form));
+      localStorage.setItem(FORM_TIMESTAMP_KEY, Date.now().toString());
+    }
+  }, [form, isClient]);
 
   const clearFormData = () => {
     localStorage.removeItem(FORM_STORAGE_KEY);
@@ -135,38 +133,54 @@ const SignUpForm: React.FC = () => {
   ) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
-    // Clear error when user types
+    // Clear specific error when user types
     if (errors[name as keyof FormErrors]) {
       setErrors((prev) => ({ ...prev, [name]: undefined }));
     }
   };
 
+  // 3. Robust Validation Logic
   const validateStep = (step: number): boolean => {
     const newErrors: FormErrors = {};
+    let isValid = true;
     
     if (step === 1) {
       if (!form.name.trim()) newErrors.name = "Full name is required";
+      
       if (!form.email.trim()) {
         newErrors.email = "Email is required";
       } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
         newErrors.email = "Please enter a valid email address";
       }
+      
       if (!form.username.trim()) newErrors.username = "Username is required";
-      if (!form.phoneNumber.trim()) {
-        newErrors.phoneNumber = "Phone number is required";
-      } else if (!/^[\d\s\+\-\(\)]{8,}$/.test(form.phoneNumber)) {
-        newErrors.phoneNumber = "Please enter a valid phone number";
-      }
+      
+      // Phone number validation logic removed
+    }
+
+    if (step === 2) {
+        if (!form.password) {
+            newErrors.password = "Password is required";
+        } else if (form.password.length < 8) {
+            newErrors.password = "Password must be at least 8 characters";
+        }
+
+        if (form.password !== form.confirmPassword) {
+            newErrors.confirmPassword = "Passwords do not match";
+        }
     }
     
-   
+    if (Object.keys(newErrors).length > 0) {
+        setErrors(newErrors);
+        isValid = false;
+    }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return isValid;
   };
 
   const nextStep = () => {
     if (validateStep(currentStep)) {
+      setErrors({}); // Clear errors before moving
       setCurrentStep(prev => prev + 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -177,25 +191,32 @@ const SignUpForm: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const validateForm = (): boolean => {
-    return validateStep(1) && validateStep(2);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) return;
+    // Validate everything one last time
+    const step1Valid = validateStep(1);
+    const step2Valid = validateStep(2);
+    
+    if (!step1Valid) {
+        setCurrentStep(1);
+        return;
+    }
+    if (!step2Valid) {
+        setCurrentStep(2);
+        return;
+    }
     
     setLoading(true);
     setErrors({});
     setSuccessMessage(null);
 
     try {
-      const result = await signUp({
+     const result = await signUp({
         name: form.name,
         email: form.email,
         username: form.username,
-        phoneNumber: form.phoneNumber,
+        phoneNumber: "", // <--- ADD THIS LINE (Pass an empty string to satisfy TS)
         password: form.password,
         confirmPassword: form.confirmPassword,
         referralCode: form.referralCode || undefined,
@@ -207,12 +228,11 @@ const SignUpForm: React.FC = () => {
         usdttrc20Address: form.usdttrc20Address || undefined,
       });
 
-      if (result.error) {
+      if (result?.error) {
         setErrors({ form: result.error });
       } else {
-        setSuccessMessage(result.message || "Registration successful! Please check your email for verification.");
-        clearFormData(); // Clear form data on successful submission
-        // Redirect to login after 3 seconds
+        setSuccessMessage(result?.message || "Registration successful! Please check your email for verification.");
+        clearFormData();
         setTimeout(() => router.push("/signin"), 3000);
       }
     } catch (error) {
@@ -248,9 +268,11 @@ const SignUpForm: React.FC = () => {
       case 1:
         return (
           <motion.div
+            key="step1"
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.3 }}
             className="space-y-5"
           >
             <div className="space-y-1">
@@ -322,33 +344,14 @@ const SignUpForm: React.FC = () => {
                 )}
               </div>
               
-              {/* <div>
-                <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 mb-1">
-                  Phone Number *
-                </label>
-                <input
-                  id="phoneNumber"
-                  type="tel"
-                  name="phoneNumber"
-                  placeholder="+1 (555) 123-4567"
-                  value={form.phoneNumber}
-                  onChange={handleChange}
-                  className={`w-full px-4 py-3 text-sm sm:text-base border ${
-                    errors.phoneNumber ? "border-red-300 focus:ring-red-500" : "border-gray-300 focus:ring-emerald-500"
-                  } rounded-lg focus:ring-2 focus:border-transparent transition placeholder-gray-400`}
-                  autoComplete="tel"
-                />
-                {errors.phoneNumber && (
-                  <p className="mt-1 text-xs text-red-600">{errors.phoneNumber}</p>
-                )}
-              </div> */}
+              {/* Phone Number Field Removed */}
             </div>
 
             <div className="flex justify-end pt-4">
               <button
                 type="button"
                 onClick={nextStep}
-                className="inline-flex items-center gap-2 py-3 px-6 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-all duration-200"
+                className="inline-flex items-center gap-2 py-3 px-6 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-all duration-200 cursor-pointer"
               >
                 <span>Continue to Security</span>
                 <FaArrowRight className="text-sm" />
@@ -360,9 +363,11 @@ const SignUpForm: React.FC = () => {
       case 2:
         return (
           <motion.div
+            key="step2"
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.3 }}
             className="space-y-5"
           >
             <div className="space-y-1">
@@ -391,7 +396,7 @@ const SignUpForm: React.FC = () => {
                   <p className="mt-1 text-xs text-red-600">{errors.password}</p>
                 )}
                 <p className="mt-1 text-xs text-gray-500">
-                  Must be at least 8 characters with uppercase, lowercase, and numbers
+                  Must be at least 8 characters.
                 </p>
               </div>
               
@@ -444,7 +449,7 @@ const SignUpForm: React.FC = () => {
               <button
                 type="button"
                 onClick={nextStep}
-                className="inline-flex items-center gap-2 py-3 px-6 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-all duration-200"
+                className="inline-flex items-center gap-2 py-3 px-6 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-all duration-200 cursor-pointer"
               >
                 <span>Continue to Wallet Setup</span>
                 <FaArrowRight className="text-sm" />
@@ -456,9 +461,11 @@ const SignUpForm: React.FC = () => {
       case 3:
         return (
           <motion.div
+            key="step3"
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.3 }}
             className="space-y-5"
           >
             <div className="space-y-1">
@@ -514,7 +521,7 @@ const SignUpForm: React.FC = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="group inline-flex items-center justify-center gap-2 py-3 px-6 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
+                className="group inline-flex items-center justify-center gap-2 py-3 px-6 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
               >
                 {loading ? (
                   <>
@@ -536,6 +543,15 @@ const SignUpForm: React.FC = () => {
         return null;
     }
   };
+
+  // Avoid hydration mismatch by waiting for client load
+  if (!isClient) {
+    return (
+      <section className="min-h-screen flex items-center justify-center bg-gray-50">
+        <FaSpinner className="animate-spin text-emerald-600 text-2xl" />
+      </section>
+    );
+  }
 
   return (
     <section className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-emerald-50 px-4 py-12 sm:px-6 mt-5">
@@ -629,7 +645,7 @@ const SignUpForm: React.FC = () => {
                 key={i}
                 href="#"
                 className="w-10 h-10 flex items-center justify-center rounded-lg bg-white border border-gray-200 hover:bg-emerald-50 hover:border-emerald-100 transition-colors duration-200 shadow-sm"
-                aria-label={`Follow us on ${Icon.name.replace("Fa", "")}`}
+                aria-label={`Follow us on social media`}
               >
                 <Icon className="text-gray-600 text-base" />
               </Link>
@@ -672,7 +688,9 @@ const SignUpForm: React.FC = () => {
               </motion.div>
             )}
             
-            {renderStep()}
+            <AnimatePresence mode="wait">
+              {renderStep()}
+            </AnimatePresence>
 
             <div className="text-center text-sm text-gray-600 pt-4 border-t border-gray-100">
               <p>

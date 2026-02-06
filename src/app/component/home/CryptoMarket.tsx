@@ -1,21 +1,19 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 import { 
   FiTrendingUp, 
   FiTrendingDown, 
   FiStar, 
   FiSearch, 
-  
   FiRefreshCw,
   FiArrowUp,
   FiArrowDown,
-  
 } from "react-icons/fi";
 import { CryptoCurrency, GlobalMarketData } from "@/types/businesses";
 import { CryptoApiService } from "@/lib/cryptoApi";
- 
 
 interface CurrencyOption {
   symbol: string;
@@ -43,13 +41,8 @@ const CryptoMarket: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [favorites, setFavorites] = useState<string[]>([]);
 
-  useEffect(() => {
-    loadMarketData();
-    const interval = setInterval(loadMarketData, 60000); // Refresh every minute
-    return () => clearInterval(interval);
-  }, [selectedCurrency]);
-
-  const loadMarketData = async () => {
+  // Wrap loadMarketData in useCallback with its dependencies
+  const loadMarketData = useCallback(async () => {
     try {
       setRefreshing(true);
       const [cryptoData, globalData] = await Promise.all([
@@ -64,7 +57,14 @@ const CryptoMarket: React.FC = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [selectedCurrency]);
+
+  // Now loadMarketData can be safely included in the dependency array
+  useEffect(() => {
+    loadMarketData();
+    const interval = setInterval(loadMarketData, 60000); // Refresh every minute
+    return () => clearInterval(interval);
+  }, [loadMarketData]);
 
   const toggleFavorite = (coinId: string) => {
     setFavorites(prev => 
@@ -93,8 +93,6 @@ const CryptoMarket: React.FC = () => {
       const bValue = b[sortBy] as number;
       return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
     });
-
-  
 
   const formatCurrency = (num: number, currency: string = selectedCurrency) => {
     return new Intl.NumberFormat('en-US', {
@@ -368,10 +366,13 @@ const CryptoRow: React.FC<{
       
       <td className="py-4 px-6">
         <div className="flex items-center gap-4">
-          <img
+          <Image
             src={crypto.image}
             alt={crypto.name}
-            className="w-10 h-10 rounded-full"
+            width={40}
+            height={40}
+            className="rounded-full"
+            unoptimized={true} // CoinGecko images are external, so we use unoptimized
           />
           <div>
             <h3 className="font-semibold text-white">{crypto.name}</h3>

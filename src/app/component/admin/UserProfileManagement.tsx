@@ -1,6 +1,6 @@
 // components/admin/AdminDashboard.tsx
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -46,11 +46,8 @@ const AdminDashboard = () => {
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
   const itemsPerPage = 10;
 
-  useEffect(() => {
-    fetchUsers();
-  }, [currentPage, search]);
-
-  const fetchUsers = async () => {
+  // Wrap fetchUsers in useCallback with its dependencies
+  const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
       const { data: usersData, error, count } = await getAllUsersWithMetrics({
@@ -81,7 +78,12 @@ const AdminDashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [search, currentPage, itemsPerPage]);
+
+  // Now fetchUsers can be safely included in the dependency array
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
   const handleEdit = (userId: string) => {
     router.push(`/deri/users/${userId}/edit`);

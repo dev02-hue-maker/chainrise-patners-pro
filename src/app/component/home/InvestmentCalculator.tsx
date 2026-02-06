@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Image from 'next/image';
 import { FaCalculator, FaExchangeAlt, FaPercentage, FaClock  } from 'react-icons/fa';
 import { GiReceiveMoney, GiPayMoney } from 'react-icons/gi';
 
@@ -348,7 +349,14 @@ export default function InvestmentCalculator() {
                         className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
                       >
                         <div className="flex items-center">
-                          <img src={crypto.image} alt={crypto.name} className="w-6 h-6 mr-2" />
+                          <Image
+                            src={crypto.image}
+                            alt={crypto.name}
+                            width={24}
+                            height={24}
+                            className="w-6 h-6 mr-2"
+                            unoptimized={true} // CoinGecko images are external
+                          />
                           <span className="font-medium">{crypto.symbol.toUpperCase()}</span>
                         </div>
                         <div className="mt-2 text-sm text-gray-600">
